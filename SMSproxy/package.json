@@ -1,0 +1,21 @@
+{
+  "name": "smsproxy",
+  "version": "0.1.0",
+  "description": "Ephemeral end-to-end-encrypted 1:1 chat. Operator runs a terminal TUI; the client opens a self-destructing HTTPS link (fronted by Caddy) in any browser. Zero runtime dependencies.",
+  "type": "commonjs",
+  "bin": {
+    "smsproxy": "bin/smsproxy.js"
+  },
+  "scripts": {
+    "start": "node bin/smsproxy.js",
+    "test": "node test/e2e.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "ws": "^8.18.0"
+  },
+  "license": "MIT"
+}

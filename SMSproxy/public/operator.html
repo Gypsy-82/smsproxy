@@ -1,0 +1,129 @@
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SMSproxy — your chat</title>
+<style>
+  :root{
+    --bg:#0a0d0b; --bg2:#0f1512; --panel:#121a15; --line:#1e2b23; --ink:#e8f3ec; --muted:#7f9488;
+    --green:#34d399; --green2:#10b981; --purple:#a78bfa; --purple2:#8b5cf6; --danger:#f87171;
+    --radius:16px; --shadow:0 10px 40px rgba(0,0,0,.45);
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:16px;
+    font:16px/1.5 var(--sans);color:var(--ink);
+    background:radial-gradient(1000px 600px at 12% -10%,rgba(52,211,153,.12),transparent 60%),
+      radial-gradient(1000px 600px at 112% 8%,rgba(167,139,250,.14),transparent 55%),var(--bg);}
+  .chat{width:min(560px,100%);height:min(84dvh,760px);display:grid;grid-template-rows:auto auto 1fr auto;
+    background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);
+    border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .alarm{display:none;background:var(--danger);color:#1a0606;font-weight:800;text-align:center;padding:9px;font-size:13px;letter-spacing:.5px}
+  .alarm.show{display:block}
+  .head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);box-shadow:0 0 0 4px rgba(127,148,136,.12)}
+  .dot.on{background:var(--green);box-shadow:0 0 0 4px rgba(52,211,153,.16)}
+  .title{font-weight:700;letter-spacing:.3px}
+  .keyind{display:inline-flex;align-items:center;gap:6px;background:transparent;border:0;cursor:pointer;color:var(--muted);font:inherit;padding:4px 8px;border-radius:9px}
+  .keyind:hover{background:var(--bg)}
+  .keyind svg{width:18px;height:18px}.keyind .lbl{font-size:12px}
+  .keyind.verified{color:var(--green)}.keyind.alarm{color:var(--danger);animation:shake .45s ease}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-3px)}40%,80%{transform:translateX(3px)}}
+  .status{margin-left:auto;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .stream{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+  .row{display:flex}.row.me{justify-content:flex-end}
+  .bubble{max-width:80%;padding:10px 14px;border-radius:16px;font-size:15px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap}
+  .me .bubble{background:linear-gradient(180deg,var(--purple),var(--purple2));color:#0b0713;border-bottom-right-radius:5px}
+  .peer .bubble{background:#f4f5f7;color:#15171e;border-bottom-left-radius:5px}  /* target = white */
+  .sys{text-align:center;color:var(--muted);font-size:12px;padding:4px}
+  .typing-dots{display:inline-flex;gap:5px;align-items:center;padding:3px 2px}
+  .typing-dots span{width:7px;height:7px;border-radius:50%;background:var(--green);opacity:.35;animation:blink 1.2s infinite ease-in-out}
+  .typing-dots span:nth-child(2){animation-delay:.2s}.typing-dots span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+  .composer{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);align-items:flex-end}
+  .composer textarea{flex:1;resize:none;height:48px;min-height:48px;max-height:120px;border-radius:12px;border:1px solid var(--line);
+    background:var(--bg);color:var(--purple);padding:13px 14px;font:inherit;line-height:1.4;outline:none}
+  .composer textarea:focus{border-color:var(--purple2);box-shadow:0 0 0 3px rgba(139,92,246,.18)}
+  .send{flex:0 0 48px;width:48px;height:48px;border:0;border-radius:12px;cursor:pointer;display:grid;place-items:center;
+    background:linear-gradient(180deg,var(--green),var(--green2));color:#04120c}
+  .send svg{width:20px;height:20px}
+</style>
+
+<section class="chat" aria-label="Your conversation">
+  <div class="alarm" id="alarm" role="alert">⚠ KEYS CHANGED — conversation self-destructing</div>
+  <header class="head">
+    <span class="dot" id="dot" aria-hidden="true"></span>
+    <span class="title">SMSproxy</span>
+    <button class="keyind" id="keyIcon" type="button" title="Encryption key status">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>
+      </svg>
+      <span class="lbl" id="keyLbl">key</span>
+    </button>
+    <span class="status" id="status">connecting…</span>
+  </header>
+  <div class="stream" id="stream" aria-live="polite"></div>
+  <form class="composer" id="composer">
+    <textarea id="msg" rows="1" placeholder="Type a message…" aria-label="Message"></textarea>
+    <button class="send" type="submit" aria-label="Send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/>
+      </svg>
+    </button>
+  </form>
+</section>
+
+<script>
+"use strict";
+const $=(id)=>document.getElementById(id);
+const stream=$('stream'), msg=$('msg'), dot=$('dot'), statusEl=$('status');
+let ws=null, peerTypingEl=null, typingSent=false, typingTimer=null, alarmed=false;
+
+const wsUrl=(location.protocol==='https:'?'wss':'ws')+'://'+location.host+location.pathname.replace(/\/$/,'')+'/ws';
+
+function connect(){
+  ws=new WebSocket(wsUrl);
+  ws.onopen=()=>{ statusEl.textContent='connected'; };
+  ws.onclose=()=>{ statusEl.textContent='disconnected'; setPeer(false); if(!alarmed) setTimeout(connect,1000); };
+  ws.onerror=()=>{};
+  ws.onmessage=(ev)=>{
+    let m; try{ m=JSON.parse(ev.data); }catch{ return; }
+    if(m.t==='ready'){ keyVerified(); setPeer(!!m.online); }
+    else if(m.t==='msg'){ setPeerTyping(false); addBubble('peer', m.text); }
+    else if(m.t==='peer'){ setPeer(!!m.online); }
+    else if(m.t==='typing'){ setPeerTyping(!!m.on); }
+    else if(m.t==='tamper'){ keyTamper(); }
+    else if(m.t==='destroyed'){ statusEl.textContent='ended'; setPeer(false); msg.disabled=true; }
+  };
+}
+function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); }
+
+function setPeer(on){ dot.classList.toggle('on',on); if(on&&statusEl.textContent!=='ended') statusEl.textContent='connected'; }
+function keyVerified(){ const k=$('keyIcon'); k.classList.add('verified'); k.classList.remove('alarm'); $('keyLbl').textContent='verified'; }
+function keyTamper(){ alarmed=true; const k=$('keyIcon'); k.classList.remove('verified'); k.classList.add('alarm'); $('keyLbl').textContent='keys changed';
+  $('alarm').classList.add('show'); statusEl.textContent='keys changed'; msg.disabled=true; msg.placeholder='conversation ended — keys changed'; }
+
+function addBubble(who,text){
+  const row=document.createElement('div'); row.className='row '+(who==='me'?'me':'peer');
+  const b=document.createElement('div'); b.className='bubble'; b.textContent=text; // textContent = no XSS
+  row.appendChild(b); stream.appendChild(row); stream.scrollTop=stream.scrollHeight;
+}
+function setPeerTyping(on){
+  if(on){ if(peerTypingEl) return; peerTypingEl=document.createElement('div'); peerTypingEl.className='row peer';
+    const b=document.createElement('div'); b.className='bubble'; const d=document.createElement('div'); d.className='typing-dots';
+    for(let i=0;i<3;i++) d.appendChild(document.createElement('span')); b.appendChild(d); peerTypingEl.appendChild(b);
+    stream.appendChild(peerTypingEl); stream.scrollTop=stream.scrollHeight; }
+  else if(peerTypingEl){ peerTypingEl.remove(); peerTypingEl=null; }
+}
+function sendTyping(on){
+  if(on){ if(!typingSent){ typingSent=true; send({t:'typing',on:true}); } clearTimeout(typingTimer); typingTimer=setTimeout(()=>sendTyping(false),1500); }
+  else { clearTimeout(typingTimer); if(typingSent){ typingSent=false; send({t:'typing',on:false}); } }
+}
+
+$('composer').addEventListener('submit',(e)=>{
+  e.preventDefault(); const text=msg.value.replace(/\s+$/,''); if(!text||msg.disabled) return;
+  sendTyping(false); send({t:'msg',text}); addBubble('me',text);
+  msg.value=''; msg.style.height='auto'; msg.focus();
+});
+msg.addEventListener('input',()=>{ msg.style.height='auto'; msg.style.height=Math.min(msg.scrollHeight,120)+'px'; sendTyping(true); });
+msg.addEventListener('keydown',(e)=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); $('composer').requestSubmit(); } });
+connect();
+</script>

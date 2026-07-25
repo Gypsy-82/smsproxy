@@ -1,0 +1,41 @@
+# systemd hardened unit (alternative to firejail). Contains the node process
+# with kernel-enforced isolation. Adjust User=, WorkingDirectory=, ExecStart=.
+#
+#   cp contrib/smsproxy.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl start smsproxy
+#
+# Note: SMSproxy is interactive (terminal chat), so this is mainly a template
+# for the containment directives — copy the [Service] hardening block into how
+# you actually launch it. Run Caddy as its own service.
+
+[Unit]
+Description=SMSproxy ephemeral chat
+After=network.target
+
+[Service]
+Type=simple
+User=smsproxy
+WorkingDirectory=/opt/smsproxy
+ExecStart=/usr/bin/node bin/smsproxy.js
+
+# --- containment: process cannot touch the rest of the machine ---
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/smsproxy
+PrivateTmp=true
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

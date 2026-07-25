@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Thin launcher so you can run ./smsproxy instead of `node bin/smsproxy.js`.
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec node "$DIR/bin/smsproxy.js" "$@"

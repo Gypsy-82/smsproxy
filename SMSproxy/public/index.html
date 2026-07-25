@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="color-scheme" content="dark" />
+<title>You've Got Mail</title>
+<style>
+  :root {
+    --bg: #0a0d0b;
+    --bg-2: #0f1512;
+    --panel: #121a15;
+    --line: #1e2b23;
+    --ink: #e8f3ec;
+    --muted: #7f9488;
+    --green: #34d399;
+    --green-2: #10b981;
+    --purple: #a78bfa;
+    --purple-2: #8b5cf6;
+    --danger: #f87171;
+    --radius: 16px;
+    --shadow: 0 10px 40px rgba(0,0,0,.45);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(52,211,153,.10), transparent 60%),
+      radial-gradient(1000px 600px at 110% 10%, rgba(167,139,250,.12), transparent 55%),
+      var(--bg);
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .wrap { min-height: 100dvh; display: grid; place-items: center; padding: 20px; }
+
+  /* ---------- Landing gate ---------- */
+  .card {
+    width: min(420px, 100%);
+    background: linear-gradient(180deg, var(--panel), var(--bg-2));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 30px 26px 26px;
+    text-align: center;
+  }
+  .badge {
+    width: 74px; height: 74px; margin: 0 auto 18px;
+    display: grid; place-items: center;
+    border-radius: 20px;
+    background: radial-gradient(120% 120% at 30% 20%, rgba(52,211,153,.25), rgba(139,92,246,.25));
+    border: 1px solid var(--line);
+  }
+  .badge svg { width: 38px; height: 38px; }
+  .env-body { stroke: var(--green); }
+  .env-flap { stroke: var(--purple); }
+  h1 {
+    margin: 0 0 6px; font-size: 24px; letter-spacing: .3px;
+    background: linear-gradient(90deg, var(--green), var(--purple));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .sub { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
+  label { display: block; text-align: left; font-size: 13px; color: var(--muted); margin: 0 0 6px; }
+  .field {
+    display: flex; gap: 8px; align-items: stretch;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 4px 4px 4px 14px;
+  }
+  .field:focus-within { border-color: var(--green-2); box-shadow: 0 0 0 3px rgba(16,185,129,.15); }
+  .field input {
+    flex: 1; min-width: 0; background: transparent; border: 0; outline: none;
+    color: var(--ink); font-size: 16px; padding: 12px 0; letter-spacing: 2px;
+  }
+  .field input::placeholder { letter-spacing: normal; color: #55655c; }
+  .reveal {
+    border: 0; background: transparent; color: var(--muted); cursor: pointer;
+    padding: 0 10px; min-width: 44px; border-radius: 10px;
+  }
+  .reveal:hover { color: var(--ink); }
+  button.primary {
+    margin-top: 16px; width: 100%; min-height: 48px; cursor: pointer;
+    border: 0; border-radius: 12px; color: #04120c; font-size: 16px; font-weight: 700;
+    background: linear-gradient(90deg, var(--green), var(--purple));
+    transition: transform .12s ease, filter .12s ease;
+  }
+  button.primary:hover { filter: brightness(1.06); }
+  button.primary:active { transform: translateY(1px); }
+  button.primary:disabled { opacity: .55; cursor: progress; }
+  .note { margin-top: 16px; font-size: 12px; color: var(--muted); }
+  .err { margin-top: 14px; min-height: 18px; color: var(--danger); font-size: 13px; }
+
+  /* ---------- Chat ---------- */
+  .chat { display: none; width: min(560px, 100%); height: min(80dvh, 720px);
+    background: linear-gradient(180deg, var(--panel), var(--bg-2));
+    border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+    grid-template-rows: auto auto 1fr auto; overflow: hidden; }
+  .chat.open { display: grid; }
+  .alarm-banner { display: none; background: var(--danger); color: #1a0606; font-weight: 800; text-align: center; padding: 9px 12px; font-size: 13px; letter-spacing: .5px; }
+  .alarm-banner.show { display: block; }
+  .keyind { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 0; cursor: pointer; color: var(--muted); font: inherit; padding: 4px 8px; border-radius: 9px; transition: color .15s ease, background .15s ease; }
+  .keyind:hover { background: var(--bg); }
+  .keyind:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+  .keyind svg { width: 18px; height: 18px; }
+  .keyind .lbl { font-size: 12px; letter-spacing: .3px; }
+  .keyind.verified { color: var(--green); }
+  .keyind.alarm { color: var(--danger); animation: shake .45s ease; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-3px); } 40%,80% { transform: translateX(3px); } }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.62); display: grid; place-items: center; padding: 20px; z-index: 50; }
+  .modal[hidden] { display: none; }
+  .modal-card { width: min(340px, 100%); background: linear-gradient(180deg, var(--panel), var(--bg-2)); border: 1px solid var(--line); border-radius: 18px; padding: 26px 24px; text-align: center; box-shadow: var(--shadow); }
+  .modal-card .kb { width: 56px; height: 56px; margin: 0 auto 14px; display: grid; place-items: center; border-radius: 16px; color: var(--green); background: radial-gradient(120% 120% at 30% 20%, rgba(52,211,153,.26), rgba(139,92,246,.22)); border: 1px solid var(--line); }
+  .modal-card .kb svg { width: 28px; height: 28px; }
+  .modal-card h2 { margin: 0 0 6px; font-size: 18px; }
+  .modal-sub { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+  .modal-code { font: 700 26px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 3px; color: var(--green); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 16px 12px; }
+  .modal-note { margin: 14px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .modal-close { width: 100%; min-height: 46px; border: 0; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 700; color: #04120c; background: linear-gradient(90deg, var(--green), var(--purple)); }
+  .chat-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 4px rgba(127,148,136,.12); }
+  .dot.on { background: var(--green); box-shadow: 0 0 0 4px rgba(52,211,153,.16); }
+  .chat-head .title { font-weight: 600; font-size: 15px; }
+  .chat-head .status { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .stream { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
+  .row { display: flex; }
+  .row.me { justify-content: flex-end; }
+  .bubble {
+    max-width: 78%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.5;
+    word-wrap: break-word; overflow-wrap: anywhere; white-space: pre-wrap;
+  }
+  .me .bubble { background: #f4f5f7; color: #15171e; border-bottom-right-radius: 5px; }   /* target (you) = white */
+  .peer .bubble { background: linear-gradient(180deg, var(--purple), var(--purple-2)); color: #0b0713; border-bottom-left-radius: 5px; }  /* operator = purple */
+  .sys { text-align: center; color: var(--muted); font-size: 12px; padding: 4px; }
+  .typing-dots { display: inline-flex; gap: 5px; align-items: center; padding: 3px 2px; }
+  .typing-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--green); opacity: .35; animation: blink 1.2s infinite ease-in-out; }
+  .typing-dots span:nth-child(2) { animation-delay: .2s; }
+  .typing-dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+  .receipt { font-size: 11px; color: var(--muted); text-align: right; margin: -4px 2px 0; min-height: 14px; }
+  .receipt.read { color: var(--green); }
+  .composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); align-items: flex-end; }
+  .composer textarea {
+    flex: 1; resize: none; height: 48px; min-height: 48px; max-height: 120px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--bg); color: #f4f5f7; padding: 13px 14px; font: inherit; line-height: 1.4; outline: none;
+  }
+  .composer textarea:focus { border-color: #39ff14; box-shadow: 0 0 0 3px rgba(57,255,20,.22); }  /* target = neon green glow */
+  .send { flex: 0 0 48px; width: 48px; height: 48px; border: 0; border-radius: 12px; cursor: pointer;
+    background: linear-gradient(180deg, var(--green), var(--green-2)); color: #04120c; display: grid; place-items: center; }
+  .send:active { transform: translateY(1px); }
+  .send svg { width: 20px; height: 20px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Landing gate -->
+  <main class="card" id="gate" aria-labelledby="gateTitle">
+    <div class="badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect class="env-body" x="3" y="5" width="18" height="14" rx="2.5" />
+        <path class="env-flap" d="M3.5 7 12 13l8.5-6" />
+      </svg>
+    </div>
+    <h1 id="gateTitle">You've Got Mail</h1>
+    <p class="sub">Enter the password you were given to open this conversation.</p>
+    <form id="gateForm" autocomplete="off">
+      <label for="pw">Password</label>
+      <div class="field">
+        <input id="pw" type="password" inputmode="text" autocomplete="off" autocapitalize="off"
+               spellcheck="false" placeholder="••••••••" aria-describedby="err" required />
+        <button type="button" class="reveal" id="reveal" aria-label="Show password">show</button>
+      </div>
+      <button type="submit" class="primary" id="openBtn">Open Mailbox</button>
+    </form>
+    <p class="err" id="err" role="alert" aria-live="assertive"></p>
+    <p class="note">End-to-end encrypted · the password is never sent in this link · single session only.</p>
+  </main>
+
+  <!-- Chat -->
+  <section class="chat" id="chat" aria-label="Conversation">
+    <div class="alarm-banner" id="alarm" role="alert" aria-live="assertive">⚠ KEYS CHANGED — conversation self-destructing</div>
+    <header class="chat-head">
+      <span class="dot" id="peerDot" aria-hidden="true"></span>
+      <span class="title">Secure line</span>
+      <button class="keyind" id="keyIcon" type="button" aria-haspopup="dialog" title="Compare encryption key" aria-label="Compare encryption key">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="7.5" cy="15.5" r="5.5" /><path d="m21 2-9.6 9.6" /><path d="m15.5 7.5 3 3L22 7l-3-3" />
+        </svg>
+        <span class="lbl" id="keyLbl">compare</span>
+      </button>
+      <span class="status" id="peerStatus">connecting…</span>
+    </header>
+    <div class="stream" id="stream" aria-live="polite"></div>
+    <form class="composer" id="composer">
+      <textarea id="msg" rows="1" placeholder="Type a message…" aria-label="Message" autocomplete="off"></textarea>
+      <button class="send" id="sendBtn" type="submit" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7z" />
+        </svg>
+      </button>
+    </form>
+  </section>
+
+  <!-- Key comparison popup -->
+  <div class="modal" id="keyModal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="kmTitle">
+      <div class="kb" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="7.5" cy="15.5" r="5.5" /><path d="m21 2-9.6 9.6" /><path d="m15.5 7.5 3 3L22 7l-3-3" />
+        </svg>
+      </div>
+      <h2 id="kmTitle">Compare your key</h2>
+      <p class="modal-sub">Read this code to your contact. It must match the code on their screen.</p>
+      <div class="modal-code" id="kmCode">••••-••••</div>
+      <p class="modal-note">If it ever differs, someone may be intercepting — stop and don't share anything.</p>
+      <button class="modal-close" id="kmClose" type="button">Got it</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ---- crypto (mirrors src/crypto.js) ----
+const te = new TextEncoder(), td = new TextDecoder();
+const ITERATIONS = 210000;
+function fromB64u(s){ s=String(s).replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; const b=atob(s); const u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
+function toB64u(bytes){ const u=new Uint8Array(bytes); let s=''; for(let i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+async function deriveKeys(pw, saltB64){
+  const salt=fromB64u(saltB64);
+  const base=await crypto.subtle.importKey('raw', te.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:ITERATIONS,hash:'SHA-256'}, base, 512));
+  const encKey=await crypto.subtle.importKey('raw', bits.slice(0,32), {name:'AES-GCM'}, false, ['encrypt','decrypt']);
+  const macKey=await crypto.subtle.importKey('raw', bits.slice(32,64), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+  return { encKey, macKey };
+}
+async function sign(macKey, bytes){ return new Uint8Array(await crypto.subtle.sign('HMAC', macKey, bytes)); }
+async function safetyCode(macKey){
+  const mac=await sign(macKey, te.encode('smsproxy-safety-v1'));
+  let hex=''; for(let i=0;i<4;i++) hex+=mac[i].toString(16).padStart(2,'0');
+  hex=hex.toUpperCase(); return hex.slice(0,4)+'-'+hex.slice(4,8);
+}
+async function encMsg(encKey, text){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv}, encKey, te.encode(text)));
+  const out=new Uint8Array(12+ct.length); out.set(iv,0); out.set(ct,12); return toB64u(out);
+}
+async function decMsg(encKey, b64){
+  const raw=fromB64u(b64); const iv=raw.slice(0,12); const ct=raw.slice(12);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv}, encKey, ct); return td.decode(pt);
+}
+
+// ---- elements ----
+const $=(id)=>document.getElementById(id);
+const gate=$('gate'), chat=$('chat'), gateForm=$('gateForm'), pw=$('pw'), openBtn=$('openBtn'),
+      errEl=$('err'), stream=$('stream'), composer=$('composer'), msgEl=$('msg'),
+      peerDot=$('peerDot'), peerStatus=$('peerStatus');
+
+let ws=null, keys=null, authed=false;
+let lastRecvId=0, typingSent=false, typingTimer=null, peerTypingEl=null, mySafety='';
+const wsUrl=(location.protocol==='https:'?'wss://':'ws://')+location.host+location.pathname.replace(/\/$/,'')+'/ws';
+
+function sendJSON(o){ if(ws && ws.readyState===1){ ws.send(JSON.stringify(o)); } }
+function sendAck(id, state){ if(id) sendJSON({t:'ack', id, state}); }
+function sendTyping(on){
+  if(!authed) return;
+  if(on){
+    if(!typingSent){ typingSent=true; sendJSON({t:'typing', on:true}); }
+    clearTimeout(typingTimer); typingTimer=setTimeout(()=>sendTyping(false), 1500);
+  } else {
+    clearTimeout(typingTimer);
+    if(typingSent){ typingSent=false; sendJSON({t:'typing', on:false}); }
+  }
+}
+function setPeerTyping(on){
+  if(on){
+    if(peerTypingEl) return;
+    peerTypingEl=document.createElement('div'); peerTypingEl.className='row peer';
+    const b=document.createElement('div'); b.className='bubble';
+    const d=document.createElement('div'); d.className='typing-dots';
+    for(let i=0;i<3;i++) d.appendChild(document.createElement('span'));
+    b.appendChild(d); peerTypingEl.appendChild(b);
+    stream.appendChild(peerTypingEl); stream.scrollTop=stream.scrollHeight;
+  } else if(peerTypingEl){ peerTypingEl.remove(); peerTypingEl=null; }
+}
+
+$('reveal').addEventListener('click', ()=>{
+  const show = pw.type==='password';
+  pw.type = show ? 'text' : 'password';
+  $('reveal').textContent = show ? 'hide' : 'show';
+  pw.focus();
+});
+
+function gateError(msg){ errEl.textContent=msg; openBtn.disabled=false; openBtn.textContent='Open Mailbox'; }
+function setPeer(online){ peerDot.classList.toggle('on', online); peerStatus.textContent = online ? 'connected' : 'offline'; }
+
+function addBubble(who, text){
+  const row=document.createElement('div');
+  row.className='row '+(who==='me'?'me':'peer');
+  const b=document.createElement('div');
+  b.className='bubble';
+  b.textContent=text;               // textContent, never innerHTML — kills XSS
+  row.appendChild(b);
+  stream.appendChild(row);
+  stream.scrollTop=stream.scrollHeight;
+}
+function addSys(text){
+  const d=document.createElement('div'); d.className='sys'; d.textContent=text;
+  stream.appendChild(d); stream.scrollTop=stream.scrollHeight;
+}
+
+gateForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  errEl.textContent='';
+  const password=pw.value;
+  if(!password){ gateError('Enter the password.'); return; }
+  openBtn.disabled=true; openBtn.textContent='Opening…';
+  try { await connect(password); }
+  catch(err){ gateError('Could not connect.'); }
+});
+
+function connect(password){
+  return new Promise((resolve)=>{
+    ws=new WebSocket(wsUrl);
+    ws.onopen=()=>{ peerStatus.textContent='handshaking…'; };
+    ws.onerror=()=>{ if(!authed) gateError('Could not reach the server.'); };
+    ws.onclose=(ev)=>{
+      if(ev.code===1013){ gateError('This link is already in use by someone else.'); }
+      else if(!authed){ if(!errEl.textContent) gateError('Connection closed.'); }
+      else { setPeer(false); addSys('disconnected'); }
+    };
+    ws.onmessage=async (ev)=>{
+      let m; try{ m=JSON.parse(ev.data); }catch{ return; }
+      if(m.t==='hello'){
+        keys=await deriveKeys(password, m.salt);
+        const proof=toB64u(await sign(keys.macKey, fromB64u(m.challenge)));
+        ws.send(JSON.stringify({t:'auth', proof}));
+      } else if(m.t==='auth-ok'){
+        authed=true; openMailbox(); resolve();
+      } else if(m.t==='auth-fail'){
+        gateError('Wrong password.'); try{ws.close();}catch{}
+      } else if(m.t==='busy'){
+        gateError('This link is already in use by someone else.');
+      } else if(m.t==='msg'){
+        setPeerTyping(false);
+        let text;
+        try{ text = await decMsg(keys.encKey, m.data); }
+        catch{ keyTamper(true); return; }   // frame won't authenticate → key changed
+        addBubble('peer', text);
+        if(m.id){ lastRecvId=m.id; sendAck(m.id,'delivered'); if(document.hasFocus()) sendAck(m.id,'read'); }
+      } else if(m.t==='typing'){
+        setPeerTyping(!!m.on);
+      } else if(m.t==='tamper'){
+        keyTamper(false);
+      } else if(m.t==='destroyed'){
+        setPeer(false); addSys('the other side ended this conversation'); msgEl.disabled=true;
+      }
+    };
+  });
+}
+
+async function openMailbox(){
+  gate.style.display='none';
+  chat.classList.add('open');
+  setPeer(true);
+  keyVerified();
+  try{ mySafety = await safetyCode(keys.macKey); }catch{}
+  msgEl.focus();
+}
+function keyVerified(){
+  const k=document.getElementById('keyIcon');
+  if(k){ k.classList.add('verified'); k.classList.remove('alarm'); k.setAttribute('aria-label','Compare encryption key'); }
+  const lbl=document.getElementById('keyLbl'); if(lbl) lbl.textContent='compare';
+}
+function keyTamper(report){
+  const k=document.getElementById('keyIcon');
+  if(k){ k.classList.remove('verified'); k.classList.add('alarm'); k.setAttribute('aria-label','Keys changed'); }
+  const lbl=document.getElementById('keyLbl'); if(lbl) lbl.textContent='keys changed';
+  const banner=document.getElementById('alarm'); if(banner) banner.classList.add('show');
+  setPeer(false); peerStatus.textContent='keys changed';
+  msgEl.disabled=true; msgEl.placeholder='conversation ended — keys changed';
+  if(report) sendJSON({t:'tamper'});
+}
+
+// Key-comparison popup
+const keyModal=document.getElementById('keyModal');
+document.getElementById('keyIcon').addEventListener('click', ()=>{
+  if(!mySafety) return;
+  document.getElementById('kmCode').textContent=mySafety;
+  keyModal.hidden=false;
+  document.getElementById('kmClose').focus();
+});
+function closeKeyModal(){ keyModal.hidden=true; document.getElementById('keyIcon').focus(); }
+document.getElementById('kmClose').addEventListener('click', closeKeyModal);
+keyModal.addEventListener('click', (e)=>{ if(e.target===keyModal) closeKeyModal(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !keyModal.hidden) closeKeyModal(); });
+
+composer.addEventListener('submit', (e)=>{ e.preventDefault(); doSend(); });
+msgEl.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doSend(); }
+});
+msgEl.addEventListener('input', ()=>{ msgEl.style.height='auto'; msgEl.style.height=Math.min(msgEl.scrollHeight,120)+'px'; sendTyping(true); });
+window.addEventListener('focus', ()=>{ if(authed && lastRecvId) sendAck(lastRecvId,'read'); });
+
+async function doSend(){
+  const text=msgEl.value.replace(/\s+$/,'');
+  if(!text || !authed || !ws || ws.readyState!==1) return;
+  sendTyping(false);
+  ws.send(JSON.stringify({t:'msg', data: await encMsg(keys.encKey, text)}));
+  addBubble('me', text);
+  msgEl.value=''; msgEl.style.height='auto'; msgEl.focus();
+}
+</script>
+</body>
+</html>
