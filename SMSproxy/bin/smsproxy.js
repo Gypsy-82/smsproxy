@@ -8,7 +8,7 @@ const fs = require('fs');
 const net = require('net');
 const path = require('path');
 const readline = require('readline');
-const { spawnSync } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const c = require('../src/crypto');
 const r = require('../src/render');
 const colors = require('../src/colors');
@@ -62,6 +62,11 @@ function getFreePort() {
 
 // Copy text to the OS clipboard so the operator can paste a clean, unwrapped link
 // (terminal line-wrapping breaks copy-paste of long links). Best-effort.
+function hasCmd(cmd) {
+  return (process.env.PATH || '').split(path.delimiter).some((d) => {
+    try { fs.accessSync(path.join(d, cmd), fs.constants.X_OK); return true; } catch { return false; }
+  });
+}
 function copyToClipboard(text) {
   const tools = [
     ['termux-clipboard-set', []],   // Android / Termux
@@ -71,9 +76,17 @@ function copyToClipboard(text) {
     ['xsel', ['--clipboard', '--input']],
   ];
   for (const [cmd, args] of tools) {
+    if (!hasCmd(cmd)) continue;
     try {
-      const res = spawnSync(cmd, args, { input: text, stdio: ['pipe', 'ignore', 'ignore'] });
-      if (!res.error && res.status === 0) return true;
+      // Fire-and-forget so it NEVER blocks launch; kill it if it stalls
+      // (e.g. termux-clipboard-set hangs when the Termux:API app isn't installed).
+      const child = spawn(cmd, args, { stdio: ['pipe', 'ignore', 'ignore'] });
+      const t = setTimeout(() => { try { child.kill(); } catch {} }, 1200);
+      child.on('error', () => clearTimeout(t));
+      child.on('exit', () => clearTimeout(t));
+      child.stdin.on('error', () => {});
+      child.stdin.end(text);
+      return true;
     } catch {}
   }
   return false;
@@ -143,6 +156,7 @@ function printHelp() {
   L('  ' + d('Skip the menu with flags'));
   L('    ' + c2('--auto') + '   ' + c2('--local') + '   ' + c2('--ttl <min>') + '   ' + c2('--fails <n>') + '   ' + c2('--password <pw>'));
   L('    ' + c2('--port <n>') + '   ' + c2('--short') + '   ' + c2('--browser') + '   ' + c2('--no-caddy') + '   ' + c2('--no-burn'));
+  L('    ' + c2('--vm') + '   browser UI reachable from a VM host (Pixel Debian) - forward the printed port');
   L('');
   L('  ' + d('In chat') + '   /link  /share  /safety  /status  /clear  /help  /quit');
   L('  ' + d('Security') + '  E2E AES-256-GCM - password out-of-band - single session - self-destructs');
@@ -178,7 +192,8 @@ function autoConfig() {
   return {
     reach: 'tunnel', port: 0, ttlMin: 60, burnOnDisconnect: true, graceSec: 0,
     maxFails: 3, runCaddy: true, domain: 'localhost', tlsMode: 'internal',
-    lease: '168h', email: '', tokenBytes: 24, ui: 'terminal', password: c.randomB64u(12), generated: true,
+    lease: '168h', email: '', tokenBytes: 24, ui: 'terminal', vm: false, opPort: 8080,
+    password: c.randomB64u(12), generated: true,
   };
 }
 
@@ -195,6 +210,8 @@ function configFromFlags(argv) {
   cfg.burnOnDisconnect = !has('--no-burn');
   if (has('--short')) cfg.tokenBytes = 12;
   if (has('--browser')) cfg.ui = 'browser';
+  if (has('--vm')) { cfg.vm = true; cfg.ui = 'browser'; }   // browser UI reachable from a VM host
+  cfg.opPort = parseInt(opt('--op-port', String(cfg.opPort)), 10);
   const pw = opt('--password', '');
   if (pw) {
     if (pw.length < 8) { console.error('  --password must be at least 8 characters.'); process.exit(1); }
@@ -322,16 +339,27 @@ async function launch(cfg) {
   if (!runCaddy && reach === 'local') console.log('\n  ' + r.C.dim('Caddy not started - run it yourself: caddy run --config ' + caddyfilePath));
 
   if (cfg.ui === 'browser') {
-    // Operator uses a local browser page (same bubble UI as the target).
-    operatorUI = new OperatorUI({ relay, safety: sas });
+    // Operator uses a browser page (same bubble UI as the target).
+    // --vm: listen on all interfaces + a fixed port so a VM's port-forwarder can reach it.
+    const host = cfg.vm ? '0.0.0.0' : '127.0.0.1';
+    const wantPort = cfg.vm ? cfg.opPort : 0;
+    operatorUI = new OperatorUI({ relay, safety: sas, host, port: wantPort });
     await operatorUI.listen();
     relay.on('message', (t) => operatorUI.onMessage(t));
     relay.on('client-online', () => operatorUI.onPeer(true));
     relay.on('client-offline', () => operatorUI.onPeer(false));
     relay.on('client-typing', (on) => operatorUI.onTyping(on));
     relay.on('tamper', () => operatorUI.onTamper());
-    console.log('\n  ' + r.C.greenB('Open YOUR chat in a browser on this machine:'));
-    console.log('       ' + r.C.cyan(operatorUI.url()));
+    if (cfg.vm) {
+      const p = operatorUI.port;
+      console.log('\n  ' + r.C.greenB(`Your chat UI is running in the VM on port ${p}.`));
+      console.log('  ' + r.C.dim(`1) In the Pixel Terminal app: Settings -> Port forwarding -> add ${p}`));
+      console.log('  ' + r.C.dim('2) Then open this on your phone:'));
+      console.log('       ' + r.C.cyan(`http://localhost:${p}${operatorUI.basePath}`));
+    } else {
+      console.log('\n  ' + r.C.greenB('Open YOUR chat in a browser on this machine:'));
+      console.log('       ' + r.C.cyan(operatorUI.url()));
+    }
     console.log('\n  ' + r.C.dim('Ctrl+C here to end the session.') + '\n');
     process.on('SIGINT', () => destroy('operator quit'));
   } else {
@@ -382,7 +410,7 @@ async function main() {
 
   process.stdout.write(splash() + '\n');
 
-  const launchFlags = ['--auto', '--local', '--ttl', '--fails', '--password', '--port', '--short', '--browser', '--no-caddy', '--no-burn'];
+  const launchFlags = ['--auto', '--local', '--ttl', '--fails', '--password', '--port', '--short', '--browser', '--vm', '--op-port', '--no-caddy', '--no-burn'];
   if (argv.some((a) => launchFlags.includes(a))) return launch(configFromFlags(argv));
 
   return menu();
