@@ -13,9 +13,11 @@ const c = require('./crypto');
 const PAGE = path.join(__dirname, '..', 'public', 'operator.html');
 
 class OperatorUI {
-  constructor({ relay, safety }) {
+  constructor({ relay, safety, host = '127.0.0.1', port = 0 }) {
     this.relay = relay;
     this.safety = safety || '';
+    this.host = host;
+    this.wantPort = port;
     this.localToken = c.randomB64u(9);
     this.basePath = `/o/${this.localToken}`;
     this.conn = null;
@@ -28,7 +30,7 @@ class OperatorUI {
   listen() {
     return new Promise((resolve, reject) => {
       this.server.once('error', reject);
-      this.server.listen(0, '127.0.0.1', () => { this.port = this.server.address().port; resolve(this.port); });
+      this.server.listen(this.wantPort, this.host, () => { this.port = this.server.address().port; resolve(this.port); });
     });
   }
 
