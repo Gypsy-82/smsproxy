@@ -13,6 +13,7 @@ gone.
 git clone https://github.com/Gypsy-82/smsproxy.git && cd smsproxy && ./install.sh && ./smsproxy
 ```
 
+> Replace `YOUR-USERNAME` with your GitHub account (the repo is named **smsproxy**).
 
 That's it. All you need is **Node 18+** — the helper binaries **`caddy` and `cloudflared`
 are downloaded for your platform automatically** (into `vendor/`) by `install.sh`, and
@@ -91,6 +92,29 @@ In a chat: `/help` shows a legend, `/safety` prints the safety code, `/quit` end
 
 Desktop Linux/macOS, **Termux**, and the **Pixel Linux (Debian) terminal** — no compiler,
 no native modules. Just `node`, plus `caddy` (and `cloudflared` for tunnel mode).
+
+## On your phone (Termux & Pixel Debian)
+
+Install once: `pkg install nodejs git` (Termux) or `sudo apt install nodejs git` (Pixel Debian
+VM), then the one-line clone above. `caddy`/`cloudflared` auto-download on first run.
+
+**Terminal mode works the same everywhere** — just run `./smsproxy` and chat in the terminal.
+It's the simplest option on a phone and needs no networking setup.
+
+**Browser mode depends on the environment**, because of how each one networks:
+
+- **Termux** shares Android's network, so browser mode works directly: pick **browser**, then open
+  the printed `http://127.0.0.1:<port>/…` link in Chrome on the same phone.
+- **Pixel "Linux Terminal" (Debian VM)** runs in an isolated sandbox — its `127.0.0.1` is *not*
+  your phone's, so that link won't open in Chrome. Use **`./smsproxy --vm`**: it binds the UI on a
+  fixed port and prints steps — forward that port in **Terminal app → Settings → Port forwarding**,
+  then open the `http://localhost:<port>/…` link it gives you. (Add `--op-port <n>` if 8080 is taken.)
+  If forwarding gives you trouble, just use **terminal mode** on the VM.
+
+**Sharing the link:** **tapping** a link always works. Copy-paste can break because a long link
+**wraps** in a narrow terminal — so the tool auto-copies the link to your clipboard when a clipboard
+tool is present (Termux:API `pkg install termux-api`, or `wl-copy`/`pbcopy`/`xclip`/`xsel`). You can
+also shorten the link with `--short`.
 
 ---
 
