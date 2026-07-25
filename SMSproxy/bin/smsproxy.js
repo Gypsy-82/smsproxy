@@ -60,6 +60,25 @@ function getFreePort() {
   });
 }
 
+// Copy text to the OS clipboard so the operator can paste a clean, unwrapped link
+// (terminal line-wrapping breaks copy-paste of long links). Best-effort.
+function copyToClipboard(text) {
+  const tools = [
+    ['termux-clipboard-set', []],   // Android / Termux
+    ['wl-copy', []],                // Wayland
+    ['pbcopy', []],                 // macOS
+    ['xclip', ['-selection', 'clipboard']],
+    ['xsel', ['--clipboard', '--input']],
+  ];
+  for (const [cmd, args] of tools) {
+    try {
+      const res = spawnSync(cmd, args, { input: text, stdio: ['pipe', 'ignore', 'ignore'] });
+      if (!res.error && res.status === 0) return true;
+    } catch {}
+  }
+  return false;
+}
+
 // First-run self-install: fetch caddy / cloudflared if they're missing for this launch.
 function ensureDeps(cfg) {
   const pf = preflight.check();
@@ -299,6 +318,7 @@ async function launch(cfg) {
   process.on('exit', killChildren);
 
   console.log('\n' + r.shareBlock({ link, password: generated ? password : null, safety: sas }));
+  if (copyToClipboard(link)) console.log('  ' + r.C.green('link copied to your clipboard') + r.C.dim(' - just paste it into a message'));
   if (!runCaddy && reach === 'local') console.log('\n  ' + r.C.dim('Caddy not started - run it yourself: caddy run --config ' + caddyfilePath));
 
   if (cfg.ui === 'browser') {
