@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="color-scheme" content="dark" />
 <title>You've Got Mail</title>
@@ -122,7 +122,7 @@
   .dot.on { background: var(--green); box-shadow: 0 0 0 4px rgba(52,211,153,.16); }
   .chat-head .title { font-weight: 600; font-size: 15px; }
   .chat-head .status { margin-left: auto; font-size: 12px; color: var(--muted); }
-  .stream { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
+  .stream { padding: 16px; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
   .row { display: flex; }
   .row.me { justify-content: flex-end; }
   .bubble {
@@ -150,6 +150,11 @@
   .send:active { transform: translateY(1px); }
   .send svg { width: 20px; height: 20px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+  /* Mobile: fill the screen so the keyboard pushes the layout instead of hiding the input */
+  @media (max-width: 640px) {
+    .wrap { padding: 0; }
+    .chat { width: 100%; max-width: none; height: 100dvh; max-height: 100dvh; border-radius: 0; border: none; box-shadow: none; }
+  }
 </style>
 </head>
 <body>
