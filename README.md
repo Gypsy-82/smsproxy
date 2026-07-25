@@ -13,7 +13,6 @@ gone.
 git clone https://github.com/Gypsy-82/smsproxy.git && cd smsproxy && ./install.sh && ./smsproxy
 ```
 
-> Replace `YOUR-USERNAME` with your GitHub account (the repo is named **smsproxy**).
 
 That's it. All you need is **Node 18+** — the helper binaries **`caddy` and `cloudflared`
 are downloaded for your platform automatically** (into `vendor/`) by `install.sh`, and
