@@ -24,7 +24,7 @@ standard library only.)
 
 ---
 
-## What it is (plain version)
+## What it is
 
 Think of it as a **disposable, secure chat room you create on demand**. You spin one
 up, get a private web link and a password, and hand them to one person. They chat in a
