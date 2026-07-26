@@ -1,6 +1,6 @@
 # SMSproxy 🔐📬
 
-**Private, end-to-end-encrypted chat you host yourself — in one line.** You run a
+**Private, end-to-end-encrypted chat you host yourself in one line.** You run a
 terminal; the other person opens a private link in any browser. No app to install,
 no account, no database, no cloud. Close it and the link dies and every message is
 gone.
